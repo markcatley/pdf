@@ -1,6 +1,7 @@
 /// PDF content streams.
 use std::fmt::{self, Display};
 use std::cmp::Ordering;
+use std::ops::Mul;
 use itertools::Itertools;
 
 use crate::error::*;
@@ -742,7 +743,7 @@ pub enum LineJoin {
 }
 
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 #[repr(C, align(8))]
 pub struct Point {
     pub x: f32,
@@ -751,6 +752,17 @@ pub struct Point {
 impl Display for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", self.x, self.y)
+    }
+}
+impl Mul<Matrix> for Point {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        Matrix {
+            e: self.x * rhs.a + self.y * rhs.c + rhs.e,
+            f: self.x * rhs.b + self.y * rhs.d + rhs.f,
+            ..rhs
+        }
     }
 }
 
@@ -781,6 +793,43 @@ pub struct Matrix {
 impl Display for Matrix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {} {} {} {} {}", self.a, self.b, self.c, self.d, self.e, self.f)
+    }
+}
+impl Default for Matrix {
+    fn default() -> Self {
+        Matrix {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: 0.0,
+            f: 0.0,
+        }
+    }
+}
+impl Mul for Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        Matrix {
+            a: self.a * rhs.a + self.b * rhs.c,
+            b: self.a * rhs.b + self.b * rhs.d,
+            c: self.c * rhs.a + self.d * rhs.c,
+            d: self.c * rhs.b + self.d * rhs.d,
+            e: self.e * rhs.a + self.f * rhs.c + rhs.e,
+            f: self.e * rhs.b + self.f * rhs.d + rhs.f,
+        }
+    }
+}
+impl Mul<Point> for Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Point) -> Self::Output {
+        Matrix {
+            e: self.e + rhs.x,
+            f: self.f + rhs.y,
+            ..self
+        }
     }
 }
 
